@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Contact</title>
+<style>
+body{
+  background-color:#00FFFF;
+}
+table, tr, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+    background-color: #f1f1c1;
+}
+th, td {
+    padding: 5px;
+    text-align: left;
+}
+</style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<a class="navbar-brand" href="/ ">
+	<h4>BACK TO HOME</h4>
+</a>
+<center>
+<div class="container">
+	<h1 class="text-center my-3 display-2">
+		<b></b>
+	</h1>
+  
+<form method="post" action="{% url 'savemessage' %}" >
+{% csrf_token %}
+  <fieldset>
+    <legend><h3>Contact Us:</h3></legend>
+    <b>First name</b>:<br>
+    <input type="text" name="firstname" value=""><br>
+    <b>Last name:</b><br>
+    <input type="text" name="lastname" value=""><br>
+    <b>Email id:</b><br>
+    <input type="email" name="Email id" value=""><br>
+    <b>Phone Number:</b><br>
+    <input type="text" name="Phone Number" value=""><br>
+    <b>How can we help you??</b><br>
+    <textarea name="How can we help you??" value="" rows="10" cols="30"></textarea><br>
+    <input type="submit" value="Submit">
+  </fieldset>
+</form>
+
+<!-- contact.html -->
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+
+</div>
+</center>
+<center><table >
+<caption><h1> Contact Us</h1></caption>
+  <tr>
+   
+    <th>Name</th>
+    <th>Contact No.</th>
+    <th>Gmail</th>
+    <th>Address</th>
+    <th></th>
+  </tr>
+  <tr>
+   
+    <td>Binod Raj Joshi</td>
+    <td>9848540921</td>
+    <td>binodjoshi2056@gmail.com</td>
+    <td>Dhangadhi,Kailali</td>
+  </tr>
+  <tr>
+    
+    <td>Kirti Raj Khanal</td>
+    <td>9861481585</td>
+    <td>kirtikhanal74@gmail.com</td>
+    <td>Lamki,Kailali</td>
+  </tr>
+  <tr>
+    
+    <td>Sanjay kr. Shrestha</td>
+    <td>9816985711</td>
+    <td>gosameerstha@gmail.com</td>
+    <td>Bagmati,Sarlahi</td>
+  </tr>
+</table></center>
+</body>
+</html>

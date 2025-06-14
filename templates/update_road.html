@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Update Road</title>
+    <style>
+        body {
+            background-color: #00FFFF;
+        }
+    </style>
+  
+    <!-- Add Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Add Leaflet and Leaflet.ajax -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-ajax/dist/leaflet.ajax.js"></script>
+</head>
+
+<body>
+
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="/ ">
+            <h4>BACK TO HOME</h4>
+        </a>
+        <!-- Add this button to your existing HTML -->
+        <button id="updateRoadButton">Update Road</button>
+
+        <!-- Add this form to your existing HTML -->
+        <div id="updateRoadForm" style="display: none;">
+            <h2>Report Blocked Road</h2>
+            <form id="roadUpdateForm" method="post" action="{% url 'UpdateRoad' %}">
+                
+                <label for="roadcondition">Road Condition:</label>
+                <input type="text" id="roadcondition" name="roadcondition">
+
+                <label for="blockageLocation">Blockage Location:</label>
+                <input type="text" id="blockageLocation" name="blockageLocation" readonly>
+<br>
+                <!-- Add a map layer for users to select the location -->
+                <div id="mapForUpdateRoad" style="height: 400px; width: 60%;"></div>
+
+                <input type="submit" value="Submit">
+            </form>
+        </div>
+
+        <!-- Add Leaflet JS -->
+        <script>
+document.addEventListener('DOMContentLoaded', function () {
+    var blockageLocationInput = document.getElementById('blockageLocation');
+    var updateRoadForm = document.getElementById('updateRoadForm');
+    var mapForUpdateRoad;
+
+    function showUpdateRoadForm() {
+        updateRoadForm.style.display = 'block';
+
+        // Initialize the map only if it's not already initialized
+        if (!mapForUpdateRoad) {
+            console.log('Initializing map...');
+            mapForUpdateRoad = L.map('mapForUpdateRoad').setView([28.2596, 83.891], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(mapForUpdateRoad);
+
+            mapForUpdateRoad.on('click', function (e) {
+                var clickedLatLng = e.latlng;
+                blockageLocationInput.value = clickedLatLng.toString();
+            });
+
+            // Attempt to add GeoJSON layer after map initialization
+            addGeoJSONLayer();
+        } else {
+            console.log('Map already initialized.');
+        }
+    }
+
+    function submitUpdateRoadForm(event) {
+    event.preventDefault();
+
+    // Get the form element
+    var updateRoadForm = document.getElementById('roadUpdateForm');
+
+    // Create FormData object from the form
+    var formData = new FormData(updateRoadForm);
+
+    // Get the CSRF token from the cookie
+    var csrftoken = document.cookie.match(/csrftoken=([^ ;]+)/)[1];
+
+    // Include the CSRF token in the headers
+    fetch("/UpdateRoad/", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Handle the response from the server as needed
+        console.log('Form submission successful:', data);
+    })
+    .catch(error => {
+        console.error('Error submitting form:', error);
+    })
+    .finally(() => {
+        updateRoadForm.style.display = 'none';
+        if (mapForUpdateRoad) {
+            mapForUpdateRoad.off('click');
+            mapForUpdateRoad.remove();
+        }
+    });
+}
+
+    function addGeoJSONLayer() {
+        console.log('Adding GeoJSON layer...');
+        var roaddatasets = new L.GeoJSON.AJAX("{% url 'road' %}", {
+            style: function (feature) {
+                var defaultStyle = {
+                    color: 'gray',
+                    weight: 2,
+                    opacity: 0.7
+                };
+
+                if (feature.properties.type === 'highway') {
+                    return {
+                        color: 'gray',
+                        weight: 4,
+                        opacity: 1
+                    };
+                } else {
+                    return defaultStyle;
+                }
+            },
+            onEachFeature: function (feature, layer) {
+                console.log('Feature Properties:', feature.properties);
+            }
+        }).addTo(mapForUpdateRoad);
+    }
+
+    document.getElementById('updateRoadButton').addEventListener('click', showUpdateRoadForm);
+    updateRoadForm.addEventListener('submit', submitUpdateRoadForm);
+});
+
+
+        </script>
+
+    </nav>
+</body>
+
+</html>

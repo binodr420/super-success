@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+{% load static %}
+{% load leaflet_tags %}
+
+<head>
+{% leaflet_js %}
+{% leaflet_css %}
+<title>Kaskikotwebmap</title>
+<style type="text/css">
+    #gis {width: vw;height:500px;}
+</style>  
+ 
+<style>
+    body{
+        background-color:lightblue;
+    }
+    #container {
+      display: flex;
+    }
+    
+    input[type=button], input[type=submit] {
+    background-color: #333;
+    border: none;
+    color: white;
+    cursor: pointer;
+    }
+    
+    input[type=button]:hover{
+       background-color: green; 
+    }
+    h1{
+        padding: 10px;
+        background-color: green;
+        color: white;
+        text-align: center;
+    }
+    ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+    }
+
+    li {
+        float: left;
+    }
+
+    li a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    }
+
+    li a:hover:not(.active) {
+    background-color: green;
+    }
+
+   
+    
+   #sidebar {
+   
+    position: fixed;
+    overflow: auto;
+    width: 200px;
+     background-color: lightgreen;
+    border: 1px solid #555;
+  }
+  
+  /* Adjust the content area */
+  #content {
+    margin-left: 220px; /* Width of the vertical navigation bar */
+  }
+   #map {
+    height: 450px;
+    width: calc(100% - 1290px); /* Adjust the width to fill the available space */
+    float: left;
+  }
+</style>
+
+
+ <link rel="stylesheet" type="text/css" href="{% static 'leaflet-groupedlayercontrol/leaflet.groupedlayercontrol.css' %}">
+ <link rel="stylesheet" type="text/css" href="{% static "src/leaflet-gps.css" %}">   
+<link rel="stylesheet" type="text/css" href="{% static "search/src/leaflet-search.css" %}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+<script type="text/javascript" src="{% static 'dist/leaflet.ajax.js' %}" >  </script>
+<script type="text/javascript" src="{% static "search/src/leaflet-search.js" %}"> </script>
+<script type="text/javascript" src="{% static "src/leaflet-gps.js" %}"> </script>
+<script type="text/javascript" src="{% static "src/Control.Geocoder.js" %}"> </script>
+<script type="text/javascript" src="{% static 'leaflet-groupedlayercontrol/leaflet.groupedlayercontrol.js' %}" ></script>
+
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<h1>Welcome To The Project -WebGis ToolKit For Routing In Landslide HazardZone </h1>
+<img style="float:left" src="{% static 'images/WavingFlag.gif' %}" style=width="204" height="85" >
+
+<ul>
+<li><a href="{% url 'home' %}"><b style ="font-size:18px">Home</b></a></li>
+<li><a href="{% url 'about' %}"><b style ="font-size:18px">About Us</b></a></li>
+<li><a href="{% url 'contact' %}"><b style ="font-size:18px">Contact</b></a></li>
+<li><a href="{% url 'UpdateRoad' %}"><b style ="font-size:18px">Update Road</b></a></li>
+<li style="float:right"><a href="{% url 'login' %}"><b style ="font-size:18px">Login</b></a></li>
+<li style="float:right"><a href="{% url 'registration' %}"><b style ="font-size:18px">Registration</b></a></li>
+</ul><br>
+
+<div style="float:left">
+        <label for="facilityType" >Nearest Facility:</label>
+        <select id="facilityType">
+            <option value="hospital">Hospital</option>
+            <option value="school">School</option>
+            <option value="openspace">Open Space</option>
+            <option value="finance">Financial Institution</option>
+            <option value="CAGB">Community Building</option>
+        </select>
+       <input  type="button" value="Search"  onclick="search_facility()" > 
+</div><br>
+<br>
+<div id="sidebar" style="background-color: #f1f1f1;">
+  <ul style="list-style-type: none; padding: 0;">
+    <li><a  href="{% url 'home' %}">Kaskikot Map</a></li>
+    <li><a href="{% url 'community building' %}">Community Buildings</a></li>
+    <li><a href="{% url 'Schools' %}">Schools</a></li>
+    <li><a href="{% url 'health facility' %}">Health Facility</a></li>
+    <li><a href="{% url 'financial institution' %}">Financial Institution</a></li>
+    <li><a href="{% url 'open space' %}">Open Space</a></li>
+    <li><a href="{% url 'houses' %}">Building/Houses</a></li>
+    <li><a href="{% url 'Road' %}">Road Network</a></li>
+    <li><a href="{% url 'Waterways' %}">Waterways</a></li>
+  </ul>
+</div>
+<div id="content">
+  <div id="map"></div>
+</div>
+
+<script type="text/javascript">
+    // ... (existing code)
+var userMarker, nearestFacilityMarker, clickMarker;
+var routingControl, map;
+
+
+function search_facility() {
+    console.log("search_facility function called");
+    var facilityType = document.getElementById("facilityType").value;
+    var userPosition, nearestFacility;
+    
+
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+            userPosition = L.latLng(latitude, longitude);
+
+            $.get('/search_facility/', {
+                'latitude': latitude,
+                'longitude': longitude,
+                'searchType': facilityType
+            }, function(response) {
+                userPosition = response.user_position;
+                nearestFacility = response.nearest_facility;
+                console.log("userPosition:", userPosition);
+                console.log("nearestFacility:", nearestFacility);
+                // Draw a route from the user's position to the nearest facility using Leaflet routing machine
+                userMarker = L.marker(userPosition).addTo(map);
+                nearestFacilityMarker = L.marker(nearestFacility.geometry.coordinates).addTo(map);
+                console.log("Map Object:", map);
+
+                // Calculate coordinates for the polygon representing the route
+                var polygonCoordinates = [
+                    userPosition,
+                    nearestFacility.geometry.coordinates,
+                     // Assuming you're using the click marker as the third point
+                ];
+                
+                console.log("polygonCoordinates:", polygonCoordinates);
+                // Create a polygon using the calculated coordinates
+                var routePolygon = L.polygon(polygonCoordinates, {
+                    color: 'blue',
+                    fillColor: 'lightblue',
+                    fillOpacity: 0.5
+                }).addTo(map);
+            });
+        });
+    }
+   
+}
+
+
+    
+    function our_layers(map,options){
+        var osm = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            });
+        var OpenTopoMap = L.tileLayer('http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: 'Map data: &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+        });
+        
+        
+       var geojsonLayer = new L.GeoJSON.AJAX("{% url 'ward' %}", {
+       style: function(feature) {
+         return {
+            color: 'black',   // Set the color of the boundary
+            weight: 2,      // Set the weight of the boundary
+            fillOpacity: 0  // Set the opacity of the fill (0 for no fill)
+         };
+        }
+}).addTo(map);
+
+
+       // Define your custom marker icons
+        var schoolIcon = L.icon({
+            iconUrl: '{% static "img/school marker.png" %}',  
+            iconSize: [32,32],  
+        });
+
+        var cagbIcon = L.icon({
+            iconUrl: '{% static "img/cagb-marker-icon.png" %}',  
+            iconSize: [32,32],  
+        });
+
+        var healthIcon = L.icon({
+            iconUrl: '{% static "img/health-marker-icon.png" %}',  
+            iconSize: [32,32],  
+        });
+
+        var financeIcon = L.icon({
+            iconUrl: '{% static "img/financial institution.png" %}', 
+            iconSize: [32,32],  
+        });
+
+        var openspaceIcon = L.icon({
+            iconUrl: '{% static "img/green.png" %}',  
+            iconSize: [32,32],  
+        });
+
+    
+
+        var cagbdatasets = new L.GeoJSON.AJAX("{% url 'cagb' %}", {
+                pointToLayer: function (feature, latlng) {
+                return L.marker(latlng, { icon: cagbIcon });  // Use cagb custom marker icon
+            },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties.name.toString());
+            }
+        });
+        cagbdatasets.addTo(map);
+
+         var schooldatasets = new L.GeoJSON.AJAX("{% url 'school' %}",{
+                    pointToLayer: function (feature, latlng) {
+                return L.marker(latlng, { icon: schoolIcon });  // Use cagb custom marker icon
+            },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties.name.toString());
+            }
+            });
+            schooldatasets.addTo(map);
+
+        var healthdatasets = new L.GeoJSON.AJAX("{% url 'health' %}",{
+                   pointToLayer: function (feature, latlng) {
+                return L.marker(latlng, { icon: healthIcon });  // Use cagb custom marker icon
+            },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties.name.toString());
+            }
+            });
+            healthdatasets.addTo(map);
+
+        var financedatasets = new L.GeoJSON.AJAX("{% url 'finance' %}",{
+                    pointToLayer: function (feature, latlng) {
+                return L.marker(latlng, { icon: financeIcon });  // Use cagb custom marker icon
+            },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties.name.toString());
+            }
+            });
+            financedatasets.addTo(map);
+
+        var openspacedatasets = new L.GeoJSON.AJAX("{% url 'openspace' %}",{
+                   pointToLayer: function (feature, latlng) {
+                return L.marker(latlng, { icon: openspaceIcon });  // Use cagb custom marker icon
+            },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties.name.toString());
+            }
+            });
+            openspacedatasets.addTo(map);
+
+           
+
+        var buildingdatasets = new L.GeoJSON.AJAX("{% url 'building' %}", {
+            });
+            buildingdatasets.addTo(map);
+
+        var roaddatasets = new L.GeoJSON.AJAX("{% url 'road' %}", {
+            style: function(feature) {
+        // Define the default styling properties
+          var defaultStyle = {
+            color: 'gray',
+            weight: 2,
+            opacity: 0.7
+          };
+        
+         // Check if the road type matches the desired type
+          if (feature.properties.type === 'highway') {
+            return {
+                color: 'gray',
+                weight: 4,
+                opacity: 1
+            };
+         } else {
+            return defaultStyle;
+         }
+        }
+        }).addTo(map);
+
+        var proaddatasets = new L.GeoJSON.AJAX("{% url 'proad' %}", {
+            });
+            proaddatasets.addTo(map);
+
+
+       var waterwaydatasets = new L.GeoJSON.AJAX("{% url 'waterway' %}", {
+    style: function(feature) {
+        // Define the default styling properties
+        var defaultStyle = {
+            color: 'blue',
+            weight: 2,
+            opacity: 0.7
+        };
+        
+        // Check if the waterway type matches the desired type
+        if (feature.properties.type === 'river') {
+            return {
+                color: 'blue',
+                weight: 4,
+                opacity: 0.9
+            };
+        } else {
+            return defaultStyle;
+        }
+    }
+}).addTo(map);
+
+
+    map.addLayer(geojsonLayer);
+
+
+var searchControl = new L.Control.Search({  //searchcontroll
+        layer: L.featureGroup([waterwaydatasets,healthdatasets,schooldatasets,roaddatasets,proaddatasets,openspacedatasets,financedatasets,cagbdatasets,buildingdatasets ]),
+        propertyName: 'name',
+        marker: false,
+        moveToLocation: function(latlng, title, map) {
+            //map.fitBounds( latlng.layer.getBounds() );
+            var zoom = map.getBoundsZoom(latlng.layer.getBounds());
+            map.setView(latlng, zoom); // access the zoom
+        }
+    });
+    searchControl.on('search:locationfound', function(e) {
+        
+        //console.log('search:locationfound', );
+        //map.removeLayer(this._markerSearch)
+        e.layer.setStyle({fillColor: '#3f0', color: '#0f0'});
+        if(e.layer._popup)
+            e.layer.openPopup();
+    }).on('search:collapsed', function(e) {
+        geojsonLayer.eachLayer(function(layer) {    //restore feature color
+            geojsonLayer.resetStyle(layer);
+        }); 
+    });
+    
+    map.addControl( searchControl );  //inizialize search control
+    var gps = new L.Control.Gps({
+        //autoActive:true,
+        autoCenter:true
+    });//inizialize control
+    gps
+    .on('gps:located', function(e) {
+        //  e.marker.bindPopup(e.latlng.toString()).openPopup()
+        console.log(e.latlng, map.getCenter())
+    })
+    .on('gps:disabled', function(e) {
+        e.marker.closePopup()
+    });
+    gps.addTo(map);
+    map.on('click', function (e) {
+    console.log(e);
+    if (clickMarker) {
+        clickMarker.removeFrom(map);
+    }
+    search_facility(map);
+    clickMarker = L.marker(e.latlng).addTo(map);
+    console.log(map);
+    if (userMarker && nearestFacilityMarker) {
+        var waypoints = [
+            userMarker.getLatLng(),
+            nearestFacilityMarker.getLatLng(),
+            clickMarker.getLatLng()
+        ];
+        
+        if (routingControl) {
+            routingControl.removeFrom(map);
+        }
+        
+        routingControl = L.Routing.control({
+            waypoints: waypoints,
+        }).addTo(map);
+    }
+});
+
+
+var baseLayers = {
+            "OSM": osm,
+            "OpenTopoMap":OpenTopoMap
+            
+        }
+
+        var groupedOverlays = {
+          "Layers": {
+            "Kaskikot":geojsonLayer ,
+            "Buildings":buildingdatasets,
+            "Health Facility":healthdatasets,
+            "Schools":schooldatasets,
+            "Road Network":roaddatasets,
+            "Open Space":openspacedatasets,
+            "Financial Institution":financedatasets,
+            "Community Buildings":cagbdatasets,
+            "Waterways":waterwaydatasets,
+            "Pokhara Road Network":proaddatasets,
+          }
+
+        };
+
+        L.control.groupedLayers(baseLayers, groupedOverlays).addTo(map);
+
+ 
+    
+}
+
+
+</script>
+
+
+
+{% leaflet_map "gis" callback="window.our_layers"%}
+
+</body>
+</html>
+

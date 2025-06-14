@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+{% load static %}
+{% load leaflet_tags %}
+
+<head>
+{% leaflet_js %}
+{% leaflet_css %}
+<title>Kaskikotwebmap</title>
+<style type="text/css">
+    #gis {width: vw;height:500px;}
+</style>  
+ 
+<style>
+    #container {
+      display: flex;
+    }
+    body{
+        background-color:lightblue;
+    }
+    h1{
+        padding: 10px;
+        background-color: green;
+        color: white;
+        text-align: center;
+    }
+    ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+    }
+
+    li {
+        float: left;
+    }
+
+    li a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    }
+
+    li a:hover:not(.active) {
+    background-color: green;
+    }
+
+   
+    
+   #sidebar {
+   
+    position: fixed;
+    overflow: auto;
+    width: 200px;
+  }
+  
+  /* Adjust the content area */
+  #content {
+    margin-left: 220px; /* Width of the vertical navigation bar */
+  }
+   #map {
+    height: 500px;
+    width: calc(100% - 1283px); /* Adjust the width to fill the available space */
+    float: left;
+  }
+</style>
+
+
+ <link rel="stylesheet" type="text/css" href="{% static 'leaflet-groupedlayercontrol/leaflet.groupedlayercontrol.css' %}">
+ <link rel="stylesheet" type="text/css" href="{% static "src/leaflet-gps.css" %}">   
+<link rel="stylesheet" type="text/css" href="{% static "search/src/leaflet-search.css" %}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+
+<script type="text/javascript" src="{% static 'dist/leaflet.ajax.js' %}" >  </script>
+<script type="text/javascript" src="{% static "search/src/leaflet-search.js" %}"> </script>
+<script type="text/javascript" src="{% static "src/leaflet-gps.js" %}"> </script>
+<script type="text/javascript" src="{% static "src/Control.Geocoder.js" %}"> </script>
+<script type="text/javascript" src="{% static 'leaflet-groupedlayercontrol/leaflet.groupedlayercontrol.js' %}" ></script>
+
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<h1>Welcome To The Project -WebGis ToolKit For Routing In Landslide HazardZone </h1>
+<img style="float:left" src="{% static 'images/WavingFlag.gif' %}" style=width="204" height="85" >
+<ul>
+<li><a href="{% url 'home' %}"><b style ="font-size:18px">Home</b></a></li>
+<li><a href="{% url 'about' %}"><b style ="font-size:18px">About Us</b></a></li>
+<li><a href="{% url 'contact' %}"><b style ="font-size:18px">Contact</b></a></li>
+<li style="float:right"><a href="{% url 'login' %}"><b style ="font-size:18px">Login</b></a></li>
+<li style="float:right"><a href="{% url 'registration' %}"><b style ="font-size:18px">Registration</b></a></li>
+</ul><br>
+
+
+<br>
+<div id="sidebar" style="background-color: #f1f1f1;">
+  <ul style="list-style-type: none; padding: 0;">
+    <li><a  href="{% url 'home' %}">Kaskikot Map</a></li>
+    <li><a href="{% url 'community building' %}">Community Buildings</a></li>
+    <li><a href="{% url 'Schools' %}">Schools</a></li>
+    <li><a href="{% url 'health facility' %}">Health Facility</a></li>
+    <li><a href="{% url 'financial institution' %}">Financial Institution</a></li>
+    <li><a href="{% url 'open space' %}">Open Space</a></li>
+    <li><a href="{% url 'houses' %}">Building/Houses</a></li>
+    <li><a href="{% url 'Road' %}">Road Network</a></li>
+    <li><a href="{% url 'Waterways' %}">Waterways</a></li>
+  </ul>
+</div>
+</div>
+<div id="content">
+  <div id="map"></div>
+</div>
+<script type="text/javascript">
+    function search_facility() {
+        var facilityType = document.getElementById("facilityType").value;
+        var userPosition, nearestFacility;
+
+        // Get the user's location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                var latitude = position.coords.latitude;
+                var longitude = position.coords.longitude;
+                // Set the user's position as a Leaflet LatLng object
+                userPosition = L.latLng(latitude, longitude);
+                // Send a request to the Django view to search for the nearest facility
+                $.get('/search_facility/', {
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'searchType': facilityType
+                }, function(response) {
+                    // Parse the response data
+                    nearestFacility = response.nearest_facility;
+                    // Draw a route from the user's position to the nearest facility using Leaflet routing machine
+                    L.Routing.control({
+                        waypoints: [
+                            L.latLng(latitude, longitude),
+                            L.latLng(nearestFacility.latitude, nearestFacility.longitude)
+                        ]
+                    }).addTo(map);
+                });
+            });
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }  
+
+    function our_layers(map,options){
+        var osm = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            });
+        var OpenTopoMap = L.tileLayer('http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: 'Map data: &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+        });
+        
+        
+       var geojsonLayer = new L.GeoJSON.AJAX("{% url 'ward' %}", {
+       style: function(feature) {
+         return {
+            color: 'black',   // Set the color of the boundary
+            weight: 2,      // Set the weight of the boundary
+            fillOpacity: 0  // Set the opacity of the fill (0 for no fill)
+         };
+        }
+}).addTo(map);
+
+
+       // Define your custom marker icons
+        
+
+        var financeIcon = L.icon({
+            iconUrl: '{% static "img/financial institution.png" %}', 
+            iconSize: [32,32],  
+        });
+
+       
+
+       var financedatasets = new L.GeoJSON.AJAX("{% url 'finance' %}",{
+                    pointToLayer: function (feature, latlng) {
+                return L.marker(latlng, { icon: financeIcon });  // Use cagb custom marker icon
+            },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties.name.toString());
+            }
+            }).addTo(map);
+
+         
+
+
+
+    map.setView([28.2596,83.891],13);
+    map.addLayer(geojsonLayer);
+
+var baseLayers = {
+            "OSM": osm,
+            "OpenTopoMap":OpenTopoMap
+            
+        }
+
+        
+
+L.control.groupedLayers(baseLayers).addTo(map);
+
+ 
+    
+}
+
+
+</script>
+
+
+
+{% leaflet_map "gis" callback="window.our_layers"%}
+
+</body>
+</html>
+
